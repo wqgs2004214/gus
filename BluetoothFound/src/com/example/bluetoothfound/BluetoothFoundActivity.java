@@ -1,5 +1,8 @@
 package com.example.bluetoothfound;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -40,6 +43,7 @@ public class BluetoothFoundActivity extends Activity {
 	private SharedPreferences prefs;
 	private Settings settings;
 	private boolean isDiscovery = false;
+	private List<String> deviceList = new ArrayList<String>();
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -95,6 +99,23 @@ public class BluetoothFoundActivity extends Activity {
 								} catch (InterruptedException e) {
 									e.printStackTrace();
 								}
+						        boolean isFound = false;
+						        while (true) {
+						        	if (!mBluetoothAdapter.isDiscovering()) {
+								        for (String deviceName : deviceList) {
+									        if (deviceName != null && deviceName.equals(DEVICE_NAME)) {
+									        	isFound = true;
+						                    }
+								        }
+								        break;
+							        }
+						        }
+						        if (!isFound) {
+						        	//play ringtone
+			                    	playRingtone();
+						        }
+						        //clear bluetooth device
+						        deviceList.clear();
 							}
 						}
 					}).start();
@@ -259,10 +280,7 @@ public class BluetoothFoundActivity extends Activity {
                 
                 // If it's already paired, skip it, because it's been listed already
                 if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
-                	if (!deviceName.equals(DEVICE_NAME)) {
-                    	//play ringtone
-                    	playRingtone();
-                    }
+                	deviceList.add(deviceName);
                 }
             // When discovery is finished, change the Activity title
             }
