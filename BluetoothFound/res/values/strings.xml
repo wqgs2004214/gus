@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">BluetoothFound</string>
+    <string name="action_settings">Settings</string>
+    <string name="title">TGK蓝牙防丢器</string>
+    <string name="alarmSettingText">报警设置</string>
+    <string name="DeviceConnect">连接设备</string>
+	<string name="DeviceDisConnect">断开设备</string>
+	<string name="alarmtitle">设置报警条件</string>
+	<string name="duration">持续时间</string>
+	<string name="stopPlay">停止播放铃声</string>
+	<string-array name="durationArray">
+	    <item>10秒</item>
+	    <item>20秒</item>
+	    <item>30秒</item>
+	    <item>60秒</item>
+	    <item>2分钟</item>
+	    <item>5分钟</item>
+	</string-array>
+</resources>
