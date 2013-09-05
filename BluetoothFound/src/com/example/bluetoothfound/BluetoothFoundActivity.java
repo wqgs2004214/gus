@@ -30,7 +30,7 @@ public class BluetoothFoundActivity extends Activity {
 	
 	//enable bluetooth request code
 	private static final int REQUEST_ENABLE_BT = 2;
-	
+	private static final String DEVICE_NAME = "123";
 	private Button connectBtn;
 	private Button alarmSettingBtn;
 	private BluetoothAdapter mBluetoothAdapter;
@@ -39,6 +39,7 @@ public class BluetoothFoundActivity extends Activity {
 	private MediaPlayer player;
 	private SharedPreferences prefs;
 	private Settings settings;
+	private boolean isDiscovery = false;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -59,7 +60,11 @@ public class BluetoothFoundActivity extends Activity {
         
         player = new MediaPlayer();
         
-		IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+		IntentFilter filter = new IntentFilter();
+		filter.addAction(BluetoothDevice.ACTION_FOUND);
+		//filter.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
+		//filter.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+		//filter.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED);
         BluetoothFoundActivity.this.registerReceiver(mReceiver, filter);
         
         /**
@@ -73,14 +78,31 @@ public class BluetoothFoundActivity extends Activity {
 				String deviceConnectText = getResources().getString(R.string.DeviceConnect);
 				String deviceDisConnectText = getResources().getString(R.string.DeviceDisConnect);
 				if (text.equalsIgnoreCase(deviceConnectText)) {
+					//connect status
 					if (mBluetoothAdapter.isDiscovering()) {
 			            mBluetoothAdapter.cancelDiscovery();
 			        }
-			        // Request discover from BluetoothAdapter
-			        mBluetoothAdapter.startDiscovery();
+					isDiscovery = true;
+					new Thread(new Runnable() {
+						
+						@Override
+						public void run() {
+							while(isDiscovery) {
+								// Request discover from BluetoothAdapter
+						        mBluetoothAdapter.startDiscovery();
+						        try {
+									Thread.sleep(12 * 1000);
+								} catch (InterruptedException e) {
+									e.printStackTrace();
+								}
+							}
+						}
+					}).start();
 					connectBtn.setText(deviceDisConnectText);
 					
 				} else {
+					//disconnect status
+					isDiscovery = false;
 					connectBtn.setText(deviceConnectText);
 				}
 			}
@@ -132,6 +154,10 @@ public class BluetoothFoundActivity extends Activity {
         }
         if (player != null && player.isPlaying()) {
         	player.stop();
+        	player.reset();
+        }
+        if (player != null) {
+        	player.release();
         }
         // Unregister broadcast listeners
         unregisterReceiver(mReceiver);
@@ -178,14 +204,14 @@ public class BluetoothFoundActivity extends Activity {
 			String pickRingtoneUrl = sharedPreferences.getString("ringtoneUri", "");
 			Uri pickUri = Uri.parse(pickRingtoneUrl);
 			player.setDataSource(this, pickUri);
+			
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		final AudioManager audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 		if (audioManager.getStreamVolume(AudioManager.STREAM_ALARM) != 0) {
 			player.setAudioStreamType(AudioManager.STREAM_ALARM);
-			
-			//player.setLooping(true);
+			player.setLooping(true);
 			try {
 				player.prepare();
 			} catch (Exception e) {
@@ -200,6 +226,7 @@ public class BluetoothFoundActivity extends Activity {
 	private void stopPlayRingtone() {
 		if (player != null && player.isPlaying()) {
 			player.stop();
+			player.reset();
 		}
 	}
 	
@@ -228,13 +255,14 @@ public class BluetoothFoundActivity extends Activity {
                 short rssi = intent.getExtras().getShort( BluetoothDevice.EXTRA_RSSI);
                 
                 foundLogTextView.setText("found devices:" + device.getName() + ", rssi:" + rssi);
-                //play ringtone
-                playRingtone();
-                
+                String deviceName = device.getName();
                 
                 // If it's already paired, skip it, because it's been listed already
                 if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
-                  // System.out.println("found devices:" + device.getName());
+                	if (!deviceName.equals(DEVICE_NAME)) {
+                    	//play ringtone
+                    	playRingtone();
+                    }
                 }
             // When discovery is finished, change the Activity title
             }
