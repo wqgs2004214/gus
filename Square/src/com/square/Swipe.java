@@ -29,6 +29,7 @@ public class Swipe {
 	private int bytesperframe; //1=8bit or 2=16bit 
 	private int channels; //stereo or mono
 	private float samplerate; //samples per second (ex 44100hz)
+	private static int SAMPLE_RATE_IN_HZ = 44100;
 	private int bitspersample; //bitspersample of the audio stream (8 bit or 16 bit)
 	private boolean bitorder; //bit order of the audiostream
 	private String aformat;
@@ -62,7 +63,7 @@ public class Swipe {
 		this.bis=sdata;
 		this.bytesperframe =2;
 		this.channels = 1;
-		this.samplerate =44100;
+		this.samplerate = SAMPLE_RATE_IN_HZ;
 		this.bitspersample =16;
 		//this.bitorder = ais.getFormat().isBigEndian();
 		//this.aformat = (ais.getFormat().getEncoding()).toString();

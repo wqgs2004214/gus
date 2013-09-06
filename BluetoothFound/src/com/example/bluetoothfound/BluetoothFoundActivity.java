@@ -33,7 +33,7 @@ public class BluetoothFoundActivity extends Activity {
 	
 	//enable bluetooth request code
 	private static final int REQUEST_ENABLE_BT = 2;
-	private static final String DEVICE_NAME = "123";
+	private static final String DEVICE_NAME = "IS96-0815-68";
 	private Button connectBtn;
 	private Button alarmSettingBtn;
 	private BluetoothAdapter mBluetoothAdapter;
@@ -86,6 +86,7 @@ public class BluetoothFoundActivity extends Activity {
 					if (mBluetoothAdapter.isDiscovering()) {
 			            mBluetoothAdapter.cancelDiscovery();
 			        }
+					foundLogTextView.setText("设备搜索中...");
 					isDiscovery = true;
 					new Thread(new Runnable() {
 						
@@ -110,7 +111,7 @@ public class BluetoothFoundActivity extends Activity {
 								        break;
 							        }
 						        }
-						        if (!isFound) {
+						        if (!isFound && isDiscovery) {
 						        	//play ringtone
 			                    	playRingtone();
 						        }
@@ -125,6 +126,8 @@ public class BluetoothFoundActivity extends Activity {
 					//disconnect status
 					isDiscovery = false;
 					connectBtn.setText(deviceConnectText);
+					foundLogTextView.setText("搜索结束..");
+					stopPlayRingtone();
 				}
 			}
 		});
@@ -143,14 +146,14 @@ public class BluetoothFoundActivity extends Activity {
 		});
 		
 		
-		Button stopPlayBtn = (Button)findViewById(R.id.stopPlay);
-		stopPlayBtn.setOnClickListener(new OnClickListener() {
-			
-			@Override
-			public void onClick(View v) {
-				stopPlayRingtone();
-			}
-		});
+//		Button stopPlayBtn = (Button)findViewById(R.id.stopPlay);
+//		stopPlayBtn.setOnClickListener(new OnClickListener() {
+//			
+//			@Override
+//			public void onClick(View v) {
+//				stopPlayRingtone();
+//			}
+//		});
 	}
 	
 	@Override
@@ -228,6 +231,8 @@ public class BluetoothFoundActivity extends Activity {
 			
 		} catch (Exception e) {
 			e.printStackTrace();
+			player.reset();
+			return;
 		}
 		final AudioManager audioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 		if (audioManager.getStreamVolume(AudioManager.STREAM_ALARM) != 0) {
@@ -275,7 +280,7 @@ public class BluetoothFoundActivity extends Activity {
                 //System.out.println("found devices:" + device.getName());
                 short rssi = intent.getExtras().getShort( BluetoothDevice.EXTRA_RSSI);
                 
-                foundLogTextView.setText("found devices:" + device.getName() + ", rssi:" + rssi);
+                foundLogTextView.setText("发现设备:" + device.getName() + ", rssi:" + rssi);
                 String deviceName = device.getName();
                 
                 // If it's already paired, skip it, because it's been listed already

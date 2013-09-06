@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">BluetoothFound</string>
+    <string name="app_name">TGK antilost</string>
     <string name="action_settings">Settings</string>
     <string name="title">TGK蓝牙防丢器</string>
     <string name="alarmSettingText">报警设置</string>

@@ -70,7 +70,7 @@ public class MicIn extends Thread{
 	 */
 	public short recalculateZeroLevel(){
 		int retval = 0;
-		for(int i=40;i<1040;i+=2){ //offset a few frames, calc the avg zero level
+		for(int i=200;i<1200;i+=2){ //offset a few frames, calc the avg zero level
 			retval += (short)((((short)lastRead[i+1])<<8) + ( ((short)lastRead[i]) & 255));
 		}
 		retval = (short)(retval/500);
@@ -121,15 +121,15 @@ public class MicIn extends Thread{
 			model.setListening(false);
 			return;
 		}
-		lastRead = new byte[4410]; //used to backtrack if we're at the end of the buffer (100ms)
+		lastRead = new byte[SAMPLE_RATE_IN_HZ / 10]; //used to backtrack if we're at the end of the buffer (100ms)
 		int read = 0; //stores the actual number of bytes we read from the buffer
 		if( 81 > ( ar.read(lastRead,0,lastRead.length)) ){
 			zerolvl = 0;
 			model.getLog().addMsg("Warning: We Couldn't Set The Zero Level Because We Didn't Read Enough Bytes");
-		}//else
-		//	zerolvl = recalculateZeroLevel(); 
-		//try something else
-		//setThresholds();
+		} else {
+			//zerolvl = recalculateZeroLevel(); 
+			//setThresholds();
+		}
 		
 		boolean trackDetected = false; //are we in the middle of recording a swipe?
 		int inNoiseLevel = 0; //the number of samples recorded inside the noise level
@@ -175,7 +175,7 @@ public class MicIn extends Thread{
 					}
 				}//outside threshold
 				else if(trackDetected){ //we are mid swipe
-					if(currAudioData.size() > 441000)
+					if(currAudioData.size() > SAMPLE_RATE_IN_HZ)
 					{//something's wrong with our thresholds we shouldnt have a swipe 5 seconds long
 						//discard this swipe, reset the zerolevel/thresholds
 						currAudioData.clear();
