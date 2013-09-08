@@ -53,7 +53,16 @@ public class BluetoothFoundActivity extends Activity {
 		connectBtn = (Button) findViewById(R.id.connectBtn);
 		alarmSettingBtn = (Button) findViewById(R.id.alarmSetting);
 		foundLogTextView = (TextView) findViewById(R.id.foundLog);
-
+		Intent intent = getIntent();
+		if (intent != null) {
+			boolean isDiscovery = intent.getBooleanExtra("isDiscovery", false);
+			if (isDiscovery) {
+				String deviceDisConnectText = getResources().getString(
+						R.string.DeviceDisConnect);
+				connectBtn.setText(deviceDisConnectText);
+				foundLogTextView.setText("设备搜索中...");
+			}
+		}
 		/**
 		 * connect to device listener
 		 */

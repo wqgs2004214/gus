@@ -10,7 +10,7 @@ import android.content.Intent;
 /** 
  * This class is to notify the user of messages with NotificationManager.
  *
- * @author Sehwan Noh (devnoh@gmail.com)
+ * @author gus
  */
 public class Notifier {
     private static final Random random = new Random(System.currentTimeMillis());
@@ -58,7 +58,7 @@ public class Notifier {
 
             notification.setLatestEventInfo(context, title, message,
                     contentIntent);
-            notificationManager.notify(random.nextInt(), notification);
+            notificationManager.notify(1, notification);
        
     }
 

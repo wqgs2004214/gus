@@ -36,6 +36,7 @@ public class BluetoothService extends Service {
 	@Override
 	public void onCreate() {
 		super.onCreate();
+		
 		mPlayer = new MediaPlayer();
 		mAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 		mVibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
