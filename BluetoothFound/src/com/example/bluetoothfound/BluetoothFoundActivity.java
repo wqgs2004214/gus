@@ -60,7 +60,7 @@ public class BluetoothFoundActivity extends Activity {
 		if (intent != null) {
 			boolean isDiscovery = intent.getBooleanExtra("isDiscovery", false);
 			int serviceStatus = prefs.getInt("serviceStatus", 0);
-			if (isDiscovery && serviceStatus == 1) {
+			if (serviceStatus == 1 || (isDiscovery && serviceStatus ==1)) {
 				String deviceDisConnectText = getResources().getString(
 						R.string.DeviceDisConnect);
 				connectBtn.setText(deviceDisConnectText);
