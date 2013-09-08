@@ -100,20 +100,20 @@
                 android:orientation="horizontal" >
 
                 <RadioButton
-                    android:id="@+id/radio0"
+                    android:id="@+id/vibrate_mode"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:checked="true"
                     android:text="震动" />
 
                 <RadioButton
-                    android:id="@+id/radio1"
+                    android:id="@+id/ringer_mode"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="声音" />
 
                 <RadioButton
-                    android:id="@+id/radio2"
+                    android:id="@+id/ringer_vibrate_mode"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="声音+震动" />

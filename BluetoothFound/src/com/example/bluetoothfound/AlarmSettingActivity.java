@@ -11,6 +11,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
+import android.media.AudioManager;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Bundle;
@@ -19,6 +20,7 @@ import android.view.View.OnClickListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.Button;
+import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.RadioGroup.OnCheckedChangeListener;
 import android.widget.Spinner;
@@ -31,6 +33,9 @@ import android.widget.Toast;
  * @version 1.0.0
  */
 public class AlarmSettingActivity extends Activity {
+	public static final int RINGTONE_ENABLE = 1;
+	public static final int VIBRATE_ENABLE = 2;
+	public static final int VIBRATE_RINGTONE_ENABLE = 3;
 	//pick ringtone request code
 	private static final int REQUEST_CODE_PICK_RINGTONE = 1;
 	public static final String SETTING = "setting";
@@ -50,13 +55,12 @@ public class AlarmSettingActivity extends Activity {
 		
 		Spinner sp = (Spinner)findViewById(R.id.duration);
 		int durationValue = prefs.getInt(SETTING_DURATION, 0);
-		//init cache value
+		//init cache duration value
 		for (int index = 0; index < duration.length; index++) {
 			if (durationValue == duration[index]) {
 				sp.setSelection(index);
 			}
 		}
-		
 		sp.setOnItemSelectedListener(new OnItemSelectedListener() {
 			@Override
 			public void onItemSelected(AdapterView<?> arg0, View arg1,
@@ -64,7 +68,6 @@ public class AlarmSettingActivity extends Activity {
 					editor.putInt("duration", duration[position]);
 					editor.commit();
 			}
-
 			@Override
 			public void onNothingSelected(AdapterView<?> arg0) {
 			}
@@ -80,12 +83,30 @@ public class AlarmSettingActivity extends Activity {
 			}
 		});
 		
+		//init cache ringer mode
+		int ringerMode = prefs.getInt("ringerMode", RINGTONE_ENABLE);
+		if (ringerMode == RINGTONE_ENABLE) {
+			((RadioButton)findViewById(R.id.ringer_mode)).setChecked(true);
+		} else if (ringerMode == VIBRATE_ENABLE) {
+			((RadioButton)findViewById(R.id.vibrate_mode)).setChecked(true);
+		} else if (ringerMode == VIBRATE_RINGTONE_ENABLE) {
+			((RadioButton)findViewById(R.id.ringer_vibrate_mode)).setChecked(true);
+		}
 		RadioGroup rg = (RadioGroup)findViewById(R.id.alram_mode);
 		rg.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-			
 			@Override
 			public void onCheckedChanged(RadioGroup group, int checkedId) {
-				//TODO:
+				int ringerMode = AudioManager.RINGER_MODE_NORMAL;
+				//set vibrate mode
+				if(checkedId == R.id.vibrate_mode) {
+					ringerMode = VIBRATE_ENABLE;
+				} else if(checkedId == R.id.ringer_mode) {
+					ringerMode = RINGTONE_ENABLE;
+				} else if(checkedId == R.id.ringer_vibrate_mode) {
+					ringerMode = VIBRATE_RINGTONE_ENABLE;
+				}
+				editor.putInt("ringerMode", ringerMode);
+				editor.commit();
 			}
 		});
 		
@@ -153,7 +174,8 @@ public class AlarmSettingActivity extends Activity {
 			Toast.makeText(this, "铃声设置失败", Toast.LENGTH_LONG).show();
 		}
 	}
-
+	
+	
 	
 	
 }
