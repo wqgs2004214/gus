@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -33,6 +34,7 @@ public class BluetoothFoundActivity extends Activity {
 	private Button alarmSettingBtn;
 	private TextView foundLogTextView;
 	private SharedPreferences prefs;
+	private Editor mEditor;
 	private Settings settings;
 	private BluetoothAdapter mBluetoothAdapter;
 	
@@ -41,6 +43,7 @@ public class BluetoothFoundActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		initSettings();
 		setContentView(R.layout.activity_bluetooth_found);
+		
 		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 		// If the adapter is null, then Bluetooth is not supported
 		if (mBluetoothAdapter == null) {
@@ -56,7 +59,8 @@ public class BluetoothFoundActivity extends Activity {
 		Intent intent = getIntent();
 		if (intent != null) {
 			boolean isDiscovery = intent.getBooleanExtra("isDiscovery", false);
-			if (isDiscovery) {
+			int serviceStatus = prefs.getInt("serviceStatus", 0);
+			if (isDiscovery && serviceStatus == 1) {
 				String deviceDisConnectText = getResources().getString(
 						R.string.DeviceDisConnect);
 				connectBtn.setText(deviceDisConnectText);
@@ -67,7 +71,6 @@ public class BluetoothFoundActivity extends Activity {
 		 * connect to device listener
 		 */
 		connectBtn.setOnClickListener(new OnClickListener() {
-
 			@Override
 			public void onClick(View v) {
 				String text = connectBtn.getText().toString();
@@ -75,11 +78,16 @@ public class BluetoothFoundActivity extends Activity {
 						R.string.DeviceConnect);
 				String deviceDisConnectText = getResources().getString(
 						R.string.DeviceDisConnect);
+				
 				if (text.equalsIgnoreCase(deviceConnectText)) {
+					mEditor.putInt("serviceStatus", 1);
+					mEditor.commit();
 					connectBtn.setText(deviceDisConnectText);
 					foundLogTextView.setText("设备搜索中...");
 					startService();
 				} else {
+					mEditor.putInt("serviceStatus", 0);
+					mEditor.commit();
 					connectBtn.setText(deviceConnectText);
 					foundLogTextView.setText("搜索服务已停止..");
 					Intent intent = new Intent();
@@ -152,6 +160,7 @@ public class BluetoothFoundActivity extends Activity {
 	private void initSettings() {
 		prefs = getSharedPreferences(AlarmSettingActivity.SETTING,
 				Context.MODE_PRIVATE);
+		mEditor = prefs.edit();
 		settings = new Settings();
 		// default ringtone duration time 20ms
 		settings.setDuration(prefs.getInt(
