@@ -1,11 +1,17 @@
 package com.example.bluetoothfound;
 
+import java.util.List;
+
 import android.media.AudioManager;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothHeadset;
+import android.bluetooth.BluetoothProfile;
+import android.bluetooth.BluetoothProfile.ServiceListener;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -51,7 +57,7 @@ public class BluetoothFoundActivity extends Activity {
 	private String mRingtoneUri = null;
 	private int[] duration = { 10, 20, 30, 60, 120, 300};
 	
-	
+	private BluetoothHeadset mBluetoothHeadset;
 	private Button connectBtn;
 	private TextView foundLogTextView;
 	private SharedPreferences prefs;
@@ -72,7 +78,7 @@ public class BluetoothFoundActivity extends Activity {
 					Toast.LENGTH_LONG).show();
 			finish();
 			return;
-		}
+		} ;
 		
 		connectBtn = (Button) findViewById(R.id.connectBtn);
 		foundLogTextView = (TextView) findViewById(R.id.foundLog);
@@ -80,12 +86,16 @@ public class BluetoothFoundActivity extends Activity {
 		if (intent != null) {
 			boolean isDiscovery = intent.getBooleanExtra("isDiscovery", false);
 			int serviceStatus = prefs.getInt("serviceStatus", 0);
-			if (serviceStatus == 1 || (isDiscovery && serviceStatus ==1)) {
+			if (serviceStatus == 1) {
 				String deviceDisConnectText = getResources().getString(
 						R.string.DeviceDisConnect);
 				connectBtn.setText(deviceDisConnectText);
-				String message = intent.getStringExtra("message");
-				foundLogTextView.setText(message);
+				if (isDiscovery) {
+					String message = intent.getStringExtra("message");
+					foundLogTextView.setText(message);
+				} else {
+					
+				}
 			} else {
 				foundLogTextView.setText("");
 			}
@@ -311,6 +321,7 @@ public class BluetoothFoundActivity extends Activity {
 			Toast.makeText(this, "铃声设置失败", Toast.LENGTH_LONG).show();
 		}
 	}
+	
 	
 	/**
 	 * update ui
