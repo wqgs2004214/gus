@@ -45,7 +45,7 @@ public class MagRead implements Observer{
 	}
 	/**
 	 * if exit service you must call release method.
-	 * 
+	 * @hide
 	 */
 	public void release() {
 		if (!main.isInterrupted()) {
@@ -56,7 +56,8 @@ public class MagRead implements Observer{
 			main.getMicIn().release();
 		}
 	}
-
+	
+	
 	@Override
 	public void update(Observable observable, Object obj) {
 		if(obj == "zerolevel"){

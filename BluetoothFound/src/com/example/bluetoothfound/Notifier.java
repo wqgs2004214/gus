@@ -46,6 +46,7 @@ public class Notifier {
                     BluetoothFoundActivity.class);
             //intent.putExtra("title", title);
             intent.putExtra("isDiscovery", isDiscovery);
+            intent.putExtra("message", message);
             //intent.putExtra(Constants.NOTIFICATION_URI, uri);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             intent.setFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);

@@ -89,12 +89,12 @@ public class BluetoothService extends Service {
 		stopPlayRingtone();
 		String pickRingtoneUrl = mSharedPreferences.getString("ringtoneUri", "");
 		int ringerMode = mSharedPreferences.getInt("ringerMode", BluetoothFoundActivity.RINGTONE_ENABLE);
+		if (ringerMode == BluetoothFoundActivity.VIBRATE_ENABLE
+				|| ringerMode == BluetoothFoundActivity.VIBRATE_RINGTONE_ENABLE) {
+			long[] pattern = { 500, 200 };
+			mVibrator.vibrate(pattern, 0);
+		}
 		if (mAudioManager.getStreamVolume(AudioManager.STREAM_ALARM) != 0) {
-			if (ringerMode == BluetoothFoundActivity.VIBRATE_ENABLE
-					|| ringerMode == BluetoothFoundActivity.VIBRATE_RINGTONE_ENABLE) {
-				long[] pattern = { 500, 200 };
-				mVibrator.vibrate(pattern, 0);
-			}
 			if (ringerMode != BluetoothFoundActivity.VIBRATE_ENABLE) {
 				try {
 					Uri pickUri = Uri.parse(pickRingtoneUrl);
@@ -119,11 +119,11 @@ public class BluetoothService extends Service {
 			try {
 			mPlayer.stop();
 			mPlayer.reset();
-			mVibrator.cancel();
 			} catch(Exception e) {
 				e.printStackTrace();
 			}
 		}
+		mVibrator.cancel();
 	}
 
 	// found device broadcast receiver
@@ -141,12 +141,13 @@ public class BluetoothService extends Service {
 				//int prevState = b.getInt(BluetoothProfile.EXTRA_PREVIOUS_STATE);
 				if (currentState == BluetoothProfile.STATE_CONNECTED) {
 					if (deviceName.equals(DEVICE_NAME)) {
-						sendTextUpdateBroadcast("发现设备:" + deviceName);
+						sendTextUpdateBroadcast("发现TGK设备:" + deviceName);
 						stopPlayRingtone();
 					}
 				} else if (currentState == BluetoothProfile.STATE_DISCONNECTED) {
+					sendTextUpdateBroadcast("TGK设备已断开连接!");
 					Notifier notifier = new Notifier(BluetoothService.this);
-		            notifier.notify(true, "通知","未发现设备");
+		            notifier.notify(true, "通知","TGK设备已断开连接!");
 					playRingtone();
 				}
 			}
@@ -209,7 +210,7 @@ public class BluetoothService extends Service {
 						}
 					}
 					if (!isTGKConnected) {
-						sendTextUpdateBroadcast("TGK设备已断开连接");
+						sendTextUpdateBroadcast("TGK设备已断开连接!");
 						playRingtone();
 					}
 

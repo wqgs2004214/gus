@@ -84,7 +84,10 @@ public class BluetoothFoundActivity extends Activity {
 				String deviceDisConnectText = getResources().getString(
 						R.string.DeviceDisConnect);
 				connectBtn.setText(deviceDisConnectText);
-				foundLogTextView.setText("TGK设备搜索中...");
+				String message = intent.getStringExtra("message");
+				foundLogTextView.setText(message);
+			} else {
+				foundLogTextView.setText("");
 			}
 		}
 		/**
@@ -103,13 +106,13 @@ public class BluetoothFoundActivity extends Activity {
 					mEditor.putInt("serviceStatus", 1);
 					mEditor.commit();
 					connectBtn.setText(deviceDisConnectText);
-					foundLogTextView.setText("TGK设备搜索中...");
+					foundLogTextView.setText("TGK设备搜索中.");
 					startService();
 				} else {
 					mEditor.putInt("serviceStatus", 0);
 					mEditor.commit();
 					connectBtn.setText(deviceConnectText);
-					foundLogTextView.setText("TGK设备搜索服务已停止..");
+					foundLogTextView.setText("TGK设备搜索服务已停止!");
 					Intent intent = new Intent();
 					intent.setAction(BluetoothService.ACTION_STOP_PLAY_RINGTONE);
 					sendBroadcast(intent);
@@ -213,9 +216,9 @@ public class BluetoothFoundActivity extends Activity {
 		case REQUEST_ENABLE_BT:
 			if (resultCode == Activity.RESULT_OK) {
 				// Bluetooth is now enabled, so set up a chat session
-				Toast.makeText(this, "蓝牙启动成功", Toast.LENGTH_LONG).show();
+				Toast.makeText(this, "蓝牙启动成功!", Toast.LENGTH_LONG).show();
 			} else {
-				Toast.makeText(this, "蓝牙无法启动", Toast.LENGTH_LONG).show();
+				Toast.makeText(this, "蓝牙无法启动!", Toast.LENGTH_LONG).show();
 				finish();
 			}
 			break;
