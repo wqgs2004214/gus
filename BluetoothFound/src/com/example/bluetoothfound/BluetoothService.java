@@ -1,13 +1,9 @@
 package com.example.bluetoothfound;
 
-import java.util.List;
-
 import android.app.Service;
-import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothHeadset;
 import android.bluetooth.BluetoothProfile;
-import android.bluetooth.BluetoothProfile.ServiceListener;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -23,13 +19,12 @@ import android.os.Vibrator;
 public class BluetoothService extends Service {
 	public static final String DEVICE_NAME = "IS96-0815-68";
 	public static final String ACTION_STOP_PLAY_RINGTONE = "stopPlayringtoneAction";
+	public static final String ACTION_START_PLAY_RINGTONE = "startPlayingtoneAction";
 	// ringtone player
 	private MediaPlayer mPlayer;
-	private BluetoothAdapter mBluetoothAdapter;
 	private AudioManager mAudioManager;
 	private Vibrator mVibrator;
 	private SharedPreferences mSharedPreferences;
-	private BluetoothHeadset mBluetoothHeadset;
 	@Override
 	public void onCreate() {
 		super.onCreate();
@@ -37,7 +32,6 @@ public class BluetoothService extends Service {
 		mPlayer = new MediaPlayer();
 		mAudioManager = (AudioManager)getSystemService(Context.AUDIO_SERVICE);
 		mVibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
-		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 		mSharedPreferences = getSharedPreferences(
 				BluetoothFoundActivity.SETTING, Context.MODE_PRIVATE);
 		
@@ -50,8 +44,8 @@ public class BluetoothService extends Service {
 		//register music boradcast
 		IntentFilter playRingtoneFilter = new IntentFilter();
 		playRingtoneFilter.addAction(ACTION_STOP_PLAY_RINGTONE);
-		registerReceiver(stopPlayRingtoneReceiver, playRingtoneFilter);
-		getProfileProxy();
+		playRingtoneFilter.addAction(ACTION_START_PLAY_RINGTONE);
+		registerReceiver(playRingtoneReceiver, playRingtoneFilter);
 	}
 
 	@Override
@@ -63,7 +57,6 @@ public class BluetoothService extends Service {
 	public void onDestroy() {
 		super.onDestroy();
 		// Make sure we're not doing discovery anymore
-		closeProfileProxy();
 		if (mPlayer != null && mPlayer.isPlaying()) {
 			mPlayer.stop();
 			mPlayer.reset();
@@ -74,7 +67,7 @@ public class BluetoothService extends Service {
 		mVibrator.cancel();
 		// Unregister broadcast listeners
 		unregisterReceiver(mReceiver);
-		unregisterReceiver(stopPlayRingtoneReceiver);
+		unregisterReceiver(playRingtoneReceiver);
 	}
 
 	@Override
@@ -179,47 +172,6 @@ public class BluetoothService extends Service {
 	};
 	
 	
-	private void closeProfileProxy() {
-		mBluetoothAdapter.closeProfileProxy(BluetoothProfile.HEADSET, mBluetoothHeadset);
-	}
-	
-	private void getProfileProxy() {
-		
-		mBluetoothAdapter.getProfileProxy(this, new ServiceListener() {
-
-			@Override
-			public void onServiceDisconnected(int profile) {
-				if (profile == BluetoothProfile.HEADSET) {
-					mBluetoothHeadset = null;
-				}
-			}
-
-			@Override
-			public void onServiceConnected(int profile, BluetoothProfile proxy) {
-				if (profile == BluetoothProfile.HEADSET) {
-					boolean isTGKConnected = false;
-					mBluetoothHeadset = (BluetoothHeadset) proxy;
-					List<BluetoothDevice> devices = mBluetoothHeadset
-							.getConnectedDevices();
-					for (final BluetoothDevice dev : devices) {
-						String deviceName = dev.getName();
-						if (deviceName.equals(BluetoothService.DEVICE_NAME)) {
-							sendTextUpdateBroadcast("TGK设备已连接:"
-										+ dev.getName());
-							isTGKConnected = true;
-						}
-					}
-					if (!isTGKConnected) {
-						sendTextUpdateBroadcast("TGK设备已断开连接!");
-						playRingtone();
-					}
-
-				}
-			}
-		}, BluetoothProfile.HEADSET);
-	}
-	
-	
 	private void sendTextUpdateBroadcast(String text) {
 		Intent uiIntent = new Intent();
 		uiIntent.setAction(BluetoothFoundActivity.ACTION_UI_UPDATE);
@@ -230,12 +182,18 @@ public class BluetoothService extends Service {
 	/**
 	 *  stop ringtone broadcast receiver
 	 */
-	private final BroadcastReceiver stopPlayRingtoneReceiver = new BroadcastReceiver() {
+	private final BroadcastReceiver playRingtoneReceiver = new BroadcastReceiver() {
 		
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			stopPlayRingtone();
-			stopSelf();
+			String action = intent.getAction();
+			if (action.equals(ACTION_STOP_PLAY_RINGTONE)) {
+				stopPlayRingtone();
+				stopSelf();
+			} else if (action.equals(ACTION_START_PLAY_RINGTONE)) {
+				playRingtone();
+			}
+			
 		}
 	};
 	

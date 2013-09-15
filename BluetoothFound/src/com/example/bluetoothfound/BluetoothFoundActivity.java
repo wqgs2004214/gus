@@ -93,9 +93,9 @@ public class BluetoothFoundActivity extends Activity {
 				if (isDiscovery) {
 					String message = intent.getStringExtra("message");
 					foundLogTextView.setText(message);
-				} else {
-					
+					closeProfileProxy();
 				}
+				getProfileProxy();
 			} else {
 				foundLogTextView.setText("");
 			}
@@ -113,12 +113,14 @@ public class BluetoothFoundActivity extends Activity {
 						R.string.DeviceDisConnect);
 				
 				if (text.equalsIgnoreCase(deviceConnectText)) {
+					getProfileProxy();
 					mEditor.putInt("serviceStatus", 1);
 					mEditor.commit();
 					connectBtn.setText(deviceDisConnectText);
 					foundLogTextView.setText("TGK设备搜索中.");
 					startService();
 				} else {
+					closeProfileProxy();
 					mEditor.putInt("serviceStatus", 0);
 					mEditor.commit();
 					connectBtn.setText(deviceConnectText);
@@ -210,6 +212,7 @@ public class BluetoothFoundActivity extends Activity {
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
+		closeProfileProxy();
 		unregisterReceiver(uiUpdateReceiver);
 	}
 
@@ -322,6 +325,47 @@ public class BluetoothFoundActivity extends Activity {
 		}
 	}
 	
+	private void closeProfileProxy() {
+		mBluetoothAdapter.closeProfileProxy(BluetoothProfile.HEADSET, mBluetoothHeadset);
+	}
+	
+	private void getProfileProxy() {
+		
+		mBluetoothAdapter.getProfileProxy(this, new ServiceListener() {
+
+			@Override
+			public void onServiceDisconnected(int profile) {
+				if (profile == BluetoothProfile.HEADSET) {
+					mBluetoothHeadset = null;
+				}
+			}
+
+			@Override
+			public void onServiceConnected(int profile, BluetoothProfile proxy) {
+				if (profile == BluetoothProfile.HEADSET) {
+					boolean isTGKConnected = false;
+					mBluetoothHeadset = (BluetoothHeadset) proxy;
+					List<BluetoothDevice> devices = mBluetoothHeadset
+							.getConnectedDevices();
+					for (final BluetoothDevice dev : devices) {
+						String deviceName = dev.getName();
+						if (deviceName.equals(BluetoothService.DEVICE_NAME)) {
+							foundLogTextView.setText("TGK设备已连接:"
+										+ dev.getName());
+							isTGKConnected = true;
+						}
+					}
+					if (!isTGKConnected) {
+						foundLogTextView.setText("TGK设备已断开连接!");
+						Intent intent = new Intent();
+						intent.setAction(BluetoothService.ACTION_START_PLAY_RINGTONE);
+						sendBroadcast(intent);
+					}
+
+				}
+			}
+		}, BluetoothProfile.HEADSET);
+	}
 	
 	/**
 	 * update ui
