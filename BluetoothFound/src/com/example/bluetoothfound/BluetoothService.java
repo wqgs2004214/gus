@@ -1,12 +1,13 @@
 package com.example.bluetoothfound;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothHeadset;
+import android.bluetooth.BluetoothProfile;
+import android.bluetooth.BluetoothProfile.ServiceListener;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -15,24 +16,20 @@ import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.Bundle;
 import android.os.IBinder;
 import android.os.Vibrator;
 
 public class BluetoothService extends Service {
-	private static final String DEVICE_NAME = "123";
+	public static final String DEVICE_NAME = "IS96-0815-68";
 	public static final String ACTION_STOP_PLAY_RINGTONE = "stopPlayringtoneAction";
-	// discovery thread
-	private static final Executor disCoveryThread = Executors
-			.newCachedThreadPool();
 	// ringtone player
 	private MediaPlayer mPlayer;
-
-	private boolean isDiscovery = false;
-	private List<String> deviceList = new ArrayList<String>();
 	private BluetoothAdapter mBluetoothAdapter;
 	private AudioManager mAudioManager;
 	private Vibrator mVibrator;
 	private SharedPreferences mSharedPreferences;
+	private BluetoothHeadset mBluetoothHeadset;
 	@Override
 	public void onCreate() {
 		super.onCreate();
@@ -42,60 +39,19 @@ public class BluetoothService extends Service {
 		mVibrator = (Vibrator)getSystemService(Context.VIBRATOR_SERVICE);
 		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 		mSharedPreferences = getSharedPreferences(
-				AlarmSettingActivity.SETTING, Context.MODE_PRIVATE);
+				BluetoothFoundActivity.SETTING, Context.MODE_PRIVATE);
+		
+		//register bluetooth Headset boradcast
 		IntentFilter filter = new IntentFilter();
-		filter.addAction(BluetoothDevice.ACTION_FOUND);
+		filter.addAction(BluetoothHeadset.ACTION_AUDIO_STATE_CHANGED);
+		filter.addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED);
 		registerReceiver(mReceiver, filter);
-		// connect status
-		if (mBluetoothAdapter.isDiscovering()) {
-			mBluetoothAdapter.cancelDiscovery();
-		}
 		
 		//register music boradcast
 		IntentFilter playRingtoneFilter = new IntentFilter();
 		playRingtoneFilter.addAction(ACTION_STOP_PLAY_RINGTONE);
 		registerReceiver(stopPlayRingtoneReceiver, playRingtoneFilter);
-		
-		// discovery is running.
-		isDiscovery = true;
-		disCoveryThread.execute(new Runnable() {
-
-			@Override
-			public void run() {
-				while (isDiscovery) {
-					// Request discover from BluetoothAdapter
-					mBluetoothAdapter.startDiscovery();
-					try {
-						Thread.sleep(12 * 1000);
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-					boolean isFound = false;
-					while (true) {
-						if (!mBluetoothAdapter.isDiscovering()) {
-							for (String deviceName : deviceList) {
-								if (deviceName != null
-										&& deviceName.equals(DEVICE_NAME)) {
-									isFound = true;
-								}
-							}
-							break;
-						}
-					}
-					if (!isFound && isDiscovery) {
-						// play ringtone
-						Notifier notifier = new Notifier(BluetoothService.this);
-			            notifier.notify(isDiscovery, "通知","未发现设备");
-						playRingtone();
-					} else if(isDiscovery){
-						stopPlayRingtone();
-					}
-					// clear bluetooth device
-					deviceList.clear();
-				}
-			}
-		});
-		
+		getProfileProxy();
 	}
 
 	@Override
@@ -107,9 +63,7 @@ public class BluetoothService extends Service {
 	public void onDestroy() {
 		super.onDestroy();
 		// Make sure we're not doing discovery anymore
-		if (mBluetoothAdapter != null) {
-			mBluetoothAdapter.cancelDiscovery();
-		}
+		closeProfileProxy();
 		if (mPlayer != null && mPlayer.isPlaying()) {
 			mPlayer.stop();
 			mPlayer.reset();
@@ -134,14 +88,14 @@ public class BluetoothService extends Service {
 	private void playRingtone() {
 		stopPlayRingtone();
 		String pickRingtoneUrl = mSharedPreferences.getString("ringtoneUri", "");
-		int ringerMode = mSharedPreferences.getInt("ringerMode", AlarmSettingActivity.RINGTONE_ENABLE);
+		int ringerMode = mSharedPreferences.getInt("ringerMode", BluetoothFoundActivity.RINGTONE_ENABLE);
 		if (mAudioManager.getStreamVolume(AudioManager.STREAM_ALARM) != 0) {
-			if (ringerMode == AlarmSettingActivity.VIBRATE_ENABLE
-					|| ringerMode == AlarmSettingActivity.VIBRATE_RINGTONE_ENABLE) {
+			if (ringerMode == BluetoothFoundActivity.VIBRATE_ENABLE
+					|| ringerMode == BluetoothFoundActivity.VIBRATE_RINGTONE_ENABLE) {
 				long[] pattern = { 500, 200 };
 				mVibrator.vibrate(pattern, 0);
 			}
-			if (ringerMode != AlarmSettingActivity.VIBRATE_ENABLE) {
+			if (ringerMode != BluetoothFoundActivity.VIBRATE_ENABLE) {
 				try {
 					Uri pickUri = Uri.parse(pickRingtoneUrl);
 					mPlayer.reset();
@@ -177,32 +131,100 @@ public class BluetoothService extends Service {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			String action = intent.getAction();
-
-			// When discovery finds a device
-			if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-				// Get the BluetoothDevice object from the Intent
-				BluetoothDevice device = intent
-						.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-				// System.out.println("found devices:" + device.getName());
-				short rssi = intent.getExtras().getShort(
-						BluetoothDevice.EXTRA_RSSI);
+			
+			//when bluetooth headset state changed
+			if (BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED.equals(action)) {
+				Bundle b = intent.getExtras();
+				int currentState = b.getInt(BluetoothProfile.EXTRA_STATE);
+				BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
 				String deviceName = device.getName();
-				// If it's already paired, skip it, because it's been listed
-				// already
-				if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
-					deviceList.add(deviceName);
+				//int prevState = b.getInt(BluetoothProfile.EXTRA_PREVIOUS_STATE);
+				if (currentState == BluetoothProfile.STATE_CONNECTED) {
+					if (deviceName.equals(DEVICE_NAME)) {
+						sendTextUpdateBroadcast("发现设备:" + deviceName);
+						stopPlayRingtone();
+					}
+				} else if (currentState == BluetoothProfile.STATE_DISCONNECTED) {
+					Notifier notifier = new Notifier(BluetoothService.this);
+		            notifier.notify(true, "通知","未发现设备");
+					playRingtone();
 				}
-				//send to BluetoothFoundActivity
-				if (deviceName.equals(DEVICE_NAME)) {
-					Intent uiIntent = new Intent();
-					uiIntent.setAction(BluetoothFoundActivity.ACTION_UI_UPDATE);
-					uiIntent.putExtra(BluetoothFoundActivity.UPDATE_STRING, "发现设备:" + deviceName +", rssi:"+ rssi);
-					sendBroadcast(uiIntent);
-				}
-				// When discovery is finished, change the Activity title
 			}
+			
+			// When discovery finds a device
+//			if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+//				// Get the BluetoothDevice object from the Intent
+//				BluetoothDevice device = intent
+//						.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+//				// System.out.println("found devices:" + device.getName());
+//				short rssi = intent.getExtras().getShort(
+//						BluetoothDevice.EXTRA_RSSI);
+//				String deviceName = device.getName();
+//				// If it's already paired, skip it, because it's been listed
+//				// already
+//				if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
+//					deviceList.add(deviceName);
+//				}
+//				//send to BluetoothFoundActivity
+//				if (deviceName.equals(DEVICE_NAME)) {
+//					Intent uiIntent = new Intent();
+//					uiIntent.setAction(BluetoothFoundActivity.ACTION_UI_UPDATE);
+//					uiIntent.putExtra(BluetoothFoundActivity.UPDATE_STRING, "发现设备:" + deviceName +", rssi:"+ rssi);
+//					sendBroadcast(uiIntent);
+//				}
+//				// When discovery is finished, change the Activity title
+//			}
 		}
 	};
+	
+	
+	private void closeProfileProxy() {
+		mBluetoothAdapter.closeProfileProxy(BluetoothProfile.HEADSET, mBluetoothHeadset);
+	}
+	
+	private void getProfileProxy() {
+		
+		mBluetoothAdapter.getProfileProxy(this, new ServiceListener() {
+
+			@Override
+			public void onServiceDisconnected(int profile) {
+				if (profile == BluetoothProfile.HEADSET) {
+					mBluetoothHeadset = null;
+				}
+			}
+
+			@Override
+			public void onServiceConnected(int profile, BluetoothProfile proxy) {
+				if (profile == BluetoothProfile.HEADSET) {
+					boolean isTGKConnected = false;
+					mBluetoothHeadset = (BluetoothHeadset) proxy;
+					List<BluetoothDevice> devices = mBluetoothHeadset
+							.getConnectedDevices();
+					for (final BluetoothDevice dev : devices) {
+						String deviceName = dev.getName();
+						if (deviceName.equals(BluetoothService.DEVICE_NAME)) {
+							sendTextUpdateBroadcast("TGK设备已连接:"
+										+ dev.getName());
+							isTGKConnected = true;
+						}
+					}
+					if (!isTGKConnected) {
+						sendTextUpdateBroadcast("TGK设备已断开连接");
+						playRingtone();
+					}
+
+				}
+			}
+		}, BluetoothProfile.HEADSET);
+	}
+	
+	
+	private void sendTextUpdateBroadcast(String text) {
+		Intent uiIntent = new Intent();
+		uiIntent.setAction(BluetoothFoundActivity.ACTION_UI_UPDATE);
+		uiIntent.putExtra(BluetoothFoundActivity.UPDATE_STRING, text);
+		sendBroadcast(uiIntent);
+	}
 	
 	/**
 	 *  stop ringtone broadcast receiver
@@ -211,7 +233,6 @@ public class BluetoothService extends Service {
 		
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			isDiscovery = false;
 			stopPlayRingtone();
 			stopSelf();
 		}

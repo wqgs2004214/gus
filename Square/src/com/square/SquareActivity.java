@@ -1,10 +1,7 @@
 package com.square;
 
 
-import java.util.Observable;
-import java.util.Observer;
 import android.app.Activity;
-import android.media.AudioRecord;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -14,13 +11,13 @@ import android.widget.Button;
 import android.widget.TextView;
 
 public class SquareActivity extends Activity {
-	private MagstripperModel model;
-	private UIUpdateHandler uiUpdateHandler;
+	private UpdateBytesHandler updateBytesHandler;
+	private UpdateBitsHandler updateBitsHandler;
 	private TextView decodedStringView;
 	private TextView strippedBinaryView;
-	private MicIn main;
 	private Button startBtn;
 	private Button stopBtn;
+	private MagRead read;
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -30,24 +27,36 @@ public class SquareActivity extends Activity {
 		stopBtn.setEnabled(false);
 		decodedStringView = (TextView)findViewById(R.id.bytes);
 		strippedBinaryView = (TextView)findViewById(R.id.bits);
-		model = new MagstripperModel();
+		
+		read = new MagRead();
+		read.addListener(new MagReadListener() {
+			
+			@Override
+			public void updateBytes(String bytes) {
+				Message msg = new Message();
+				msg.obj = bytes;
+				updateBytesHandler.sendMessage(msg);
+			}
+			
+			@Override
+			public void updateBits(String bits) {
+				Message msg = new Message();
+				msg.obj = bits;
+				updateBitsHandler.sendMessage(msg);
+				
+			}
+		});
 		MicListener ml = new MicListener();
 		startBtn.setOnClickListener(ml);
 		stopBtn.setOnClickListener(ml);
-		uiUpdateHandler = new UIUpdateHandler();
+		updateBytesHandler = new UpdateBytesHandler();
+		updateBitsHandler = new UpdateBitsHandler();
 	}
 	
 	@Override
 	protected void onDestroy() {
 		super.onDestroy();
-		if (!main.isInterrupted()) {
-			main.interrupt();
-		}
-		
-		if (main.getMicIn().getState() == AudioRecord.STATE_INITIALIZED) {
-			main.getMicIn().stop();
-		}
-		
+		read.release();
 	}
 
 
@@ -55,15 +64,7 @@ public class SquareActivity extends Activity {
 	/**
 	 * Listener called with the mic status button is clicked, and when the zero level or noise thresholds are changed
 	 */
-	private class MicListener implements OnClickListener, Observer{
-		
-		MicListener(){
-			main = new MicIn(model);
-			main.setPriority(Thread.MAX_PRIORITY);
-			main.start();
-			model.addObserver(this);
-			
-		}
+	private class MicListener implements OnClickListener{
 		
 		/**
 		 * Called when the mic button is clicked
@@ -71,61 +72,40 @@ public class SquareActivity extends Activity {
 		 */
 		@Override
 		public void onClick(View v) {
-			if(main.getMicIn() == null){//mic could not be initialized
-				
-			}else if(v == stopBtn){//stop listening
+			if(v == stopBtn){//stop listening
 				stopBtn.setEnabled(false);
 				startBtn.setEnabled(true);
-				stopListening();
+				read.stop();
 			}else if(v == startBtn) {//start listening
 				stopBtn.setEnabled(true);
 				startBtn.setEnabled(false);
-				startListening();
+				read.start();
 			}
 		}
-
-		
-		public void startListening(){
-			model.setListening(true);
-			main.suspendListening(false);
-		}
-		
-		public void stopListening(){
-			model.setListening(false);
-			main.suspendListening(true);
-		}
-		
-		/**
-		 * Listener called with the zero level or noise threshold is 
-		 */
-		public void update(Observable obs, Object obj){
-			if(obj == "zerolevel"){
-				if(!model.getZeroAutomatic()){ //zerolevel statically set
-					main.setZeroLevel((short)model.getZeroLevel());
-				}
-			}else if(obj == "thresholds"){
-				main.setThresholds(); //system log is updated in micin.java
-			} else if(obj instanceof Swipe) {
-				Message uiUpdateMsg = new Message();
-				uiUpdateMsg.obj = obj;
-				uiUpdateHandler.sendMessage(uiUpdateMsg);
-			}
-		}
-
 		
 	}
 	
 	
-	private class UIUpdateHandler extends Handler {
+	private class UpdateBytesHandler extends Handler {
 
 		@Override
 		public void handleMessage(Message msg) {
-			Swipe swipe = (Swipe)msg.obj;
-			decodedStringView.setText(swipe.getDecodedString());
-			strippedBinaryView.setText(swipe.getStrippedBinary());
+			String bytes = (String)msg.obj;
+			decodedStringView.setText(bytes);
 		}
 		
 	}
+	
+	private class UpdateBitsHandler extends Handler {
+
+		@Override
+		public void handleMessage(Message msg) {
+			String bits = (String)msg.obj;
+			strippedBinaryView.setText(bits);
+		}
+		
+	}
+
 	
 	
 

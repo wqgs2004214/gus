@@ -1,5 +1,8 @@
 package com.example.bluetoothfound;
 
+import android.media.AudioManager;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
@@ -12,9 +15,15 @@ import android.content.SharedPreferences.Editor;
 import android.view.Menu;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.AdapterView.OnItemSelectedListener;
+import android.widget.RadioGroup.OnCheckedChangeListener;
 
 /**
  * bluetooth found activity
@@ -30,8 +39,20 @@ public class BluetoothFoundActivity extends Activity {
 	public static final String UPDATE_STRING = "updateString";
 	// enable bluetooth request code
 	private static final int REQUEST_ENABLE_BT = 2;
+	
+	public static final int RINGTONE_ENABLE = 1;
+	public static final int VIBRATE_ENABLE = 2;
+	public static final int VIBRATE_RINGTONE_ENABLE = 3;
+	//pick ringtone request code
+	private static final int REQUEST_CODE_PICK_RINGTONE = 1;
+	public static final String SETTING = "setting";
+	public static final String SETTING_DURATION = "duration";
+	public static final String SETTING_RINGTONE_URI = "ringtoneUri";
+	private String mRingtoneUri = null;
+	private int[] duration = { 10, 20, 30, 60, 120, 300};
+	
+	
 	private Button connectBtn;
-	private Button alarmSettingBtn;
 	private TextView foundLogTextView;
 	private SharedPreferences prefs;
 	private Editor mEditor;
@@ -54,7 +75,6 @@ public class BluetoothFoundActivity extends Activity {
 		}
 		
 		connectBtn = (Button) findViewById(R.id.connectBtn);
-		alarmSettingBtn = (Button) findViewById(R.id.alarmSetting);
 		foundLogTextView = (TextView) findViewById(R.id.foundLog);
 		Intent intent = getIntent();
 		if (intent != null) {
@@ -64,7 +84,7 @@ public class BluetoothFoundActivity extends Activity {
 				String deviceDisConnectText = getResources().getString(
 						R.string.DeviceDisConnect);
 				connectBtn.setText(deviceDisConnectText);
-				foundLogTextView.setText("设备搜索中...");
+				foundLogTextView.setText("TGK设备搜索中...");
 			}
 		}
 		/**
@@ -83,37 +103,82 @@ public class BluetoothFoundActivity extends Activity {
 					mEditor.putInt("serviceStatus", 1);
 					mEditor.commit();
 					connectBtn.setText(deviceDisConnectText);
-					foundLogTextView.setText("设备搜索中...");
+					foundLogTextView.setText("TGK设备搜索中...");
 					startService();
 				} else {
 					mEditor.putInt("serviceStatus", 0);
 					mEditor.commit();
 					connectBtn.setText(deviceConnectText);
-					foundLogTextView.setText("搜索服务已停止..");
+					foundLogTextView.setText("TGK设备搜索服务已停止..");
 					Intent intent = new Intent();
 					intent.setAction(BluetoothService.ACTION_STOP_PLAY_RINGTONE);
 					sendBroadcast(intent);
 				}
 			}
 		});
-
-		/**
-		 * alarm ringtone listener
-		 */
-		alarmSettingBtn.setOnClickListener(new OnClickListener() {
-
-			@Override
-			public void onClick(View v) {
-				Intent intent = new Intent(BluetoothFoundActivity.this,
-						AlarmSettingActivity.class);
-				startActivityForResult(intent, 3);
-			}
-		});
-
-		//register ui update broadcast receiver
+		
+		// register ui update broadcast receiver
 		IntentFilter filter = new IntentFilter();
 		filter.addAction(ACTION_UI_UPDATE);
 		registerReceiver(uiUpdateReceiver, filter);
+				
+		Spinner sp = (Spinner)findViewById(R.id.duration);
+		int durationValue = prefs.getInt(SETTING_DURATION, 0);
+		//init cache duration value
+		for (int index = 0; index < duration.length; index++) {
+			if (durationValue == duration[index]) {
+				sp.setSelection(index);
+			}
+		}
+		sp.setOnItemSelectedListener(new OnItemSelectedListener() {
+			@Override
+			public void onItemSelected(AdapterView<?> arg0, View arg1,
+					int position, long arg3) {
+					mEditor.putInt("duration", duration[position]);
+					mEditor.commit();
+			}
+			@Override
+			public void onNothingSelected(AdapterView<?> arg0) {
+			}
+				
+		});
+		
+		Button pickRingtoneBtn = (Button)findViewById(R.id.pickringtone);
+		pickRingtoneBtn.setOnClickListener(new OnClickListener() {
+			
+			@Override
+			public void onClick(View v) {
+				doPickRingtone();
+			}
+		});
+		
+		//init cache ringer mode
+		int ringerMode = prefs.getInt("ringerMode", RINGTONE_ENABLE);
+		if (ringerMode == RINGTONE_ENABLE) {
+			((RadioButton)findViewById(R.id.ringer_mode)).setChecked(true);
+		} else if (ringerMode == VIBRATE_ENABLE) {
+			((RadioButton)findViewById(R.id.vibrate_mode)).setChecked(true);
+		} else if (ringerMode == VIBRATE_RINGTONE_ENABLE) {
+			((RadioButton)findViewById(R.id.ringer_vibrate_mode)).setChecked(true);
+		}
+		RadioGroup rg = (RadioGroup)findViewById(R.id.alram_mode);
+		rg.setOnCheckedChangeListener(new OnCheckedChangeListener() {
+			@Override
+			public void onCheckedChanged(RadioGroup group, int checkedId) {
+				int ringerMode = AudioManager.RINGER_MODE_NORMAL;
+				//set vibrate mode
+				if(checkedId == R.id.vibrate_mode) {
+					ringerMode = VIBRATE_ENABLE;
+				} else if(checkedId == R.id.ringer_mode) {
+					ringerMode = RINGTONE_ENABLE;
+				} else if(checkedId == R.id.ringer_vibrate_mode) {
+					ringerMode = VIBRATE_RINGTONE_ENABLE;
+				}
+				mEditor.putInt("ringerMode", ringerMode);
+				mEditor.commit();
+			}
+		});
+
 	}
 
 	@Override
@@ -154,25 +219,33 @@ public class BluetoothFoundActivity extends Activity {
 				finish();
 			}
 			break;
+		case REQUEST_CODE_PICK_RINGTONE: 
+			if (resultCode == Activity.RESULT_OK) {
+				Uri pickedUri = data
+						.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI);
+				handleRingtonePicked(pickedUri);
+			} else {
+				//Toast.makeText(this, "铃声设置失败", Toast.LENGTH_LONG).show();
+			}
+			break;
+		
 		}
 	}
 
 	private void initSettings() {
-		prefs = getSharedPreferences(AlarmSettingActivity.SETTING,
-				Context.MODE_PRIVATE);
+		prefs = getSharedPreferences(SETTING, Context.MODE_PRIVATE);
 		mEditor = prefs.edit();
 		settings = new Settings();
 		// default ringtone duration time 20ms
-		settings.setDuration(prefs.getInt(
-				AlarmSettingActivity.SETTING_DURATION, 20 * 1000));
-		String ringtoneUri = prefs.getString(
-				AlarmSettingActivity.SETTING_RINGTONE_URI, "");
+		settings.setDuration(prefs.getInt(SETTING_DURATION, 20 * 1000));
+		String ringtoneUri = prefs.getString(SETTING_RINGTONE_URI, "");
 		if (ringtoneUri == "") {
 			Toast.makeText(this, "请设置提醒铃声", Toast.LENGTH_LONG).show();
 		}
 		settings.setRingtone(ringtoneUri);
 
 	}
+		
 	/**
 	 * start discovery bluetooth device service.
 	 */
@@ -188,6 +261,54 @@ public class BluetoothFoundActivity extends Activity {
 		stopService(service);
 	}
 	
+	
+	private void doPickRingtone() {
+		Intent intent = new Intent(RingtoneManager.ACTION_RINGTONE_PICKER);
+		// Allow user to pick 'Default'
+		intent.putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true);
+		// Show only ringtones
+		intent.putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE,
+				RingtoneManager.TYPE_RINGTONE);
+		// Don't show 'Silent'
+		intent.putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false);
+
+		Uri ringtoneUri;
+		if (mRingtoneUri != null) {
+			ringtoneUri = Uri.parse(mRingtoneUri);
+		} else {
+			// Otherwise pick default ringtone Uri so that something is
+			// selected.
+			ringtoneUri = RingtoneManager
+					.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+		}
+
+		// Put checkmark next to the current ringtone for this contact
+		intent.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI,
+				ringtoneUri);
+
+		// Launch!
+		// startActivityForResult(intent, REQUEST_CODE_PICK_RINGTONE);
+		startActivityForResult(intent, REQUEST_CODE_PICK_RINGTONE);
+	}
+	
+	
+	private void handleRingtonePicked(Uri pickedUri) {
+		if (pickedUri == null || RingtoneManager.isDefault(pickedUri)) {
+			mRingtoneUri = null;
+		} else {
+			mRingtoneUri = pickedUri.toString();
+		}
+		// get ringtone name and you can save mRingtoneUri for database.
+		if (mRingtoneUri != null) {
+			SharedPreferences sharedPreferences = getSharedPreferences(SETTING, Context.MODE_PRIVATE);
+			Editor editor = sharedPreferences.edit();
+			editor.putString(SETTING_RINGTONE_URI, mRingtoneUri);
+			editor.commit();
+		} else {
+			Toast.makeText(this, "铃声设置失败", Toast.LENGTH_LONG).show();
+		}
+	}
+	
 	/**
 	 * update ui
 	 */
@@ -200,5 +321,6 @@ public class BluetoothFoundActivity extends Activity {
 			foundLogTextView.setText(updateText);
 		}
 	};
+	
 
 }
