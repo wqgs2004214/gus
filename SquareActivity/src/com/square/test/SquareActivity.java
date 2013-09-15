@@ -1,5 +1,9 @@
-package com.square;
+package com.square.test;
 
+
+import com.square.MagRead;
+import com.square.MagReadListener;
+import com.square.R;
 
 import android.app.Activity;
 import android.os.Bundle;
