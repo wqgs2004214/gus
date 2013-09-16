@@ -1,5 +1,8 @@
 package com.example.bluetoothfound;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 import android.app.Service;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothHeadset;
@@ -25,6 +28,8 @@ public class BluetoothService extends Service {
 	private AudioManager mAudioManager;
 	private Vibrator mVibrator;
 	private SharedPreferences mSharedPreferences;
+	private final Timer stopPlayRingtoneTimer = new Timer();
+	private TimerTask stopPlayRingtoneTask;
 	@Override
 	public void onCreate() {
 		super.onCreate();
@@ -79,8 +84,13 @@ public class BluetoothService extends Service {
 	 * play setting ringtone
 	 */
 	private void playRingtone() {
+		if (stopPlayRingtoneTask != null) {
+			stopPlayRingtoneTask.cancel();
+			stopPlayRingtoneTimer.purge();
+		}
 		stopPlayRingtone();
 		String pickRingtoneUrl = mSharedPreferences.getString("ringtoneUri", "");
+		int durationValue = mSharedPreferences.getInt(BluetoothFoundActivity.SETTING_DURATION, 5);
 		int ringerMode = mSharedPreferences.getInt("ringerMode", BluetoothFoundActivity.RINGTONE_ENABLE);
 		if (ringerMode == BluetoothFoundActivity.VIBRATE_ENABLE
 				|| ringerMode == BluetoothFoundActivity.VIBRATE_RINGTONE_ENABLE) {
@@ -102,6 +112,19 @@ public class BluetoothService extends Service {
 				mPlayer.start();
 			}
 		}
+		
+		/**
+		 * stop play ringtone task.
+		 */
+		stopPlayRingtoneTask = new TimerTask() {
+			
+			@Override
+			public void run() {
+				stopPlayRingtone();
+			}
+		};
+		
+		stopPlayRingtoneTimer.schedule(stopPlayRingtoneTask, durationValue * 1000);
 	}
 
 	/**

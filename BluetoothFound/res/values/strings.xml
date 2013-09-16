@@ -11,11 +11,12 @@
 	<string name="duration">持续时间</string>
 	<string name="stopPlay">停止播放铃声</string>
 	<string-array name="durationArray">
+	    <item>5秒</item>
 	    <item>10秒</item>
 	    <item>20秒</item>
 	    <item>30秒</item>
 	    <item>60秒</item>
+	    <item>1分钟</item>
 	    <item>2分钟</item>
-	    <item>5分钟</item>
 	</string-array>
 </resources>

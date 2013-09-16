@@ -55,7 +55,7 @@ public class BluetoothFoundActivity extends Activity {
 	public static final String SETTING_DURATION = "duration";
 	public static final String SETTING_RINGTONE_URI = "ringtoneUri";
 	private String mRingtoneUri = null;
-	private int[] duration = { 10, 20, 30, 60, 120, 300};
+	private int[] duration = { 5, 10, 20, 30, 60, 120};
 	
 	private BluetoothHeadset mBluetoothHeadset;
 	private Button connectBtn;
@@ -113,14 +113,13 @@ public class BluetoothFoundActivity extends Activity {
 						R.string.DeviceDisConnect);
 				
 				if (text.equalsIgnoreCase(deviceConnectText)) {
-					getProfileProxy();
 					mEditor.putInt("serviceStatus", 1);
 					mEditor.commit();
 					connectBtn.setText(deviceDisConnectText);
 					foundLogTextView.setText("TGK设备搜索中.");
 					startService();
+					getProfileProxy();
 				} else {
-					closeProfileProxy();
 					mEditor.putInt("serviceStatus", 0);
 					mEditor.commit();
 					connectBtn.setText(deviceConnectText);
@@ -128,6 +127,7 @@ public class BluetoothFoundActivity extends Activity {
 					Intent intent = new Intent();
 					intent.setAction(BluetoothService.ACTION_STOP_PLAY_RINGTONE);
 					sendBroadcast(intent);
+					closeProfileProxy();
 				}
 			}
 		});
@@ -138,7 +138,7 @@ public class BluetoothFoundActivity extends Activity {
 		registerReceiver(uiUpdateReceiver, filter);
 				
 		Spinner sp = (Spinner)findViewById(R.id.duration);
-		int durationValue = prefs.getInt(SETTING_DURATION, 0);
+		int durationValue = prefs.getInt(SETTING_DURATION, 5);
 		//init cache duration value
 		for (int index = 0; index < duration.length; index++) {
 			if (durationValue == duration[index]) {
