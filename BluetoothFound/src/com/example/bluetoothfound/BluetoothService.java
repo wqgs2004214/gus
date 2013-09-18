@@ -61,13 +61,17 @@ public class BluetoothService extends Service {
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
+		try {
 		// Make sure we're not doing discovery anymore
-		if (mPlayer != null && mPlayer.isPlaying()) {
-			mPlayer.stop();
-			mPlayer.reset();
-		}
-		if (mPlayer != null) {
-			mPlayer.release();
+			if (mPlayer != null && mPlayer.isPlaying()) {
+				mPlayer.stop();
+				mPlayer.reset();
+			}
+			if (mPlayer != null) {
+				mPlayer.release();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 		mVibrator.cancel();
 		// Unregister broadcast listeners
@@ -131,13 +135,13 @@ public class BluetoothService extends Service {
 	 * stop play ringtone
 	 */
 	private void stopPlayRingtone() {
-		if (mPlayer != null && mPlayer.isPlaying()) {
-			try {
-			mPlayer.stop();
-			mPlayer.reset();
-			} catch(Exception e) {
-				e.printStackTrace();
+		try {
+			if (mPlayer != null && mPlayer.isPlaying()) {
+				mPlayer.stop();
+				mPlayer.reset();
 			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 		mVibrator.cancel();
 	}
